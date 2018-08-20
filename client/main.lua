@@ -19,6 +19,7 @@ local CurrentActionMsg          = ''
 local CurrentActionData         = {}
 local GUI                       = {}
 GUI.Time                        = 0
+local currentImpoundLot					= nil
 
 --[[
   Setup of ESX
@@ -91,7 +92,7 @@ Citizen.CreateThread(function()
 		for _,v in pairs(Config.ImpoundLots) do
 			if(GetDistanceBetweenCoords(coords, v.Pos.x, v.Pos.y, v.Pos.z, true) < v.Size.x) then
 				isInMarker  = true
-				this_ImpoundLot = v
+				currentImpoundLot = v
 			end
 		end
 
@@ -170,6 +171,12 @@ function drawImpoundLotMarkers()
 	end
 end
 
+--[[
+  The primary impound menu
+
+	return
+	  void
+]]
 function OpenImpoundMenu()
 	local ply = GetPlayerPed(-1)
 
@@ -179,11 +186,9 @@ function OpenImpoundMenu()
 		{label = "Retrieve Vehicle", value = "retrieve_vehicle"}
 	}
 
-
 	if hasImpoundAppropriateJob() and IsPedInAnyVehicle(ply, true) then
 		table.insert(elements, {label = "Impound Vehicle", value="impound_vehicle"})
 	end
-
 
 	ESX.UI.Menu.Open(
 		'default', GetCurrentResourceName(), 'impound_menu',
@@ -193,8 +198,8 @@ function OpenImpoundMenu()
 			elements = elements,
 		},
 		function(data, menu)
-
 			menu.close()
+
 			if(data.current.value == 'retrieve_vehicle') then
 				ListVehiclesMenu()
 			end
@@ -227,6 +232,154 @@ function ImpoundCurrentVehicle()
 end
 
 --[[
+  Generates the menu showing the user which of their vehicles are
+	currently impounded
+
+	Returns
+	 void
+]]
+function ListVehiclesMenu()
+	local elements = {}
+	local elementPages = {}
+
+	ESX.TriggerServerCallback('esx_impound:get_vehicle_list', function(vehicles)
+		for _,v in pairs(vehicles) do
+			local hashVehicule = v.vehicle.model
+  		local vehicleName = GetDisplayNameFromVehicleModel(hashVehicule)
+  		local vehicleProps = v.vehicle
+  		local vehiclePlate = vehicleProps.plate
+  		local vehClassFilter = {}
+			local allowedVehicles = {}
+  		if currentImpoundLot.AllowedVehicles ~= nil then
+  			allowedVehicles = this_Garage.AllowedVehicles
+  		end
+
+  		if currentImpoundLot.Type == nil or currentImpoundLot.Type == "impound_lot" then
+  			table.insert(vehClassFilter,0) --compacts
+				table.insert(vehClassFilter,1) --sedans
+				table.insert(vehClassFilter,2) --SUV's
+				table.insert(vehClassFilter,3) --coupes
+				table.insert(vehClassFilter,4) --muscle
+				table.insert(vehClassFilter,5) --sport classic
+				table.insert(vehClassFilter,6) --sport
+				table.insert(vehClassFilter,7) --super
+				table.insert(vehClassFilter,8) --motorcycle
+				table.insert(vehClassFilter,9) --offroad
+				table.insert(vehClassFilter,10) --industrial
+				table.insert(vehClassFilter,11) --utility
+				table.insert(vehClassFilter,12) --vans
+				table.insert(vehClassFilter,13) --bicycles
+				table.insert(vehClassFilter,17) --service
+				table.insert(vehClassFilter,18) --emergency
+				table.insert(vehClassFilter,19) --military
+  		end
+
+  		if currentImpoundLot.Type == "smallhanger" then
+  			table.insert(vehClassFilter, 16) --planes
+  		end
+
+  		if currentImpoundLot.Type == "helipad" then
+  			table.insert(vehClassFilter, 15) --helicopters
+  		end
+
+  		if currentImpoundLot.Type == "dock" then
+  			table.insert(vehClassFilter, 14) --boats
+  		end
+
+  		if has_value(vehClassFilter,GetVehicleClassFromName(vehicleName)) then
+  			if has_value(allowedVehicles,vehicleName:lower()) or tablelength(allowedVehicles) == 0 then
+  				local labelvehicle
+    			labelvehicle = vehicleName .. " - " .. vehiclePlate
+  				table.insert(elements, {label = labelvehicle, value = v})
+  			end
+
+  			if tablelength(elements) >= 10 then
+  				table.insert(elementPages, elements)
+  				elements = {}
+  			end
+  		end
+		end
+
+		table.insert(elementPages, elements)
+		loadListVehiclePage(elementPages, 1)
+	end)
+end
+
+function loadListVehiclePage(elementPages, page)
+	if page <= tablelength(elementPages) then
+		local elements = {}
+		if page > 1 then
+			table.insert(elements, {label = "Previous Page", value = "pp"})
+		end
+
+		elements = mergeTables(elements,elementPages[page])
+
+		if page < tablelength(elementPages) then
+			table.insert(elements, {label = "Next Page", value = "np"})
+		end
+
+
+		ESX.UI.Menu.Open(
+		'default', GetCurrentResourceName(), 'inpound_spawn_vehicle',
+		{
+			title    = 'Impound Lot',
+			align    = 'top-left',
+			elements = elements,
+		},
+		function(data, menu)
+			if data.current.value == "np" then
+				page = page + 1
+				loadListVehiclePage(elementPages,page)
+			elseif data.current.value == "pp" then
+				page = page - 1
+				loadListVehiclePage(elementPages,page)
+			else
+				menu.close()
+				SpawnVehicle(data.current.value.vehicle)
+			end
+		end,
+		function(data, menu)
+			menu.close()
+		end)
+	end
+end
+
+function SpawnVehicle(vehicle)
+	local heading = 120.0
+	local plate = vehicle.plate
+
+	if currentImpoundLot.RetrievePoint.Heading ~= nil then
+		heading = currentImpoundLot.RetrievePoint.Heading
+	end
+
+	ESX.TriggerServerCallback('esx_impound:retrieve_vehicle', function()
+	  ESX.ShowNotification('Vehicle has been returned!')
+		CreateClientSideVehicle(vehicle)
+	end, plate)
+
+end
+
+--[[
+  Creates the client side vehicle
+
+	Params
+	  vehicle - table
+
+  Returns
+	  void
+]]
+function CreateClientSideVehicle(vehicle)
+	ESX.Game.SpawnVehicle(vehicle.model, {
+		x = currentImpoundLot.RetrievePoint.Pos.x ,
+		y = currentImpoundLot.RetrievePoint.Pos.y,
+		z = currentImpoundLot.RetrievePoint.Pos.z + 1
+		}, heading, function(callback_vehicle)
+		  ESX.Game.SetVehicleProperties(callback_vehicle, vehicle)
+		  SetVehicleNumberPlateText(callback_vehicle, vehicle.plate)
+	end)
+end
+
+--[[
   Determines if a table has a value in it
 
   Params
@@ -244,4 +397,37 @@ function has_value (tab, val)
   end
 
   return false
+end
+
+--[[
+  Determines how many elements exist in a table
+
+	Params
+	  T - table
+
+	Returns
+	  integer
+]]
+function tablelength(T)
+  local count = 0
+  for _ in pairs(T) do count = count + 1 end
+  return count
+end
+
+
+--[[
+  Merges two tables into one
+
+	Params
+	  t1 - table
+		t2 - table
+
+	Returns
+	  table
+]]
+function mergeTables(t1, t2)
+   for k,v in ipairs(t2) do
+      table.insert(t1, v)
+   end
+   return t1
 end
