@@ -21,7 +21,7 @@ ESX.RegisterServerCallback('esx_impound:get_vehicle_list', function(source, cb)
 	MySQL.Async.fetchAll("SELECT * FROM impounded_vehicles WHERE owner=@identifier",{['@identifier'] = xPlayer.getIdentifier()}, function(data)
 		for _,v in pairs(data) do
 			local vehicle = json.decode(v.vehicle)
-			table.insert(vehicles, {vehicle = vehicle, state = v.state})
+			table.insert(vehicles, {vehicle = vehicle, state = v.state, can_release = VehicleEligableForRelease(v)})
 		end
 		cb(vehicles)
 	end)
@@ -38,11 +38,13 @@ end)
 	 void
 ]]
 function ImpoundVehicle(plate)
+  local current_time = os.time(os.date("!*t"))
+
 	-- Retrieve vehicle data from garage
 	MySQL.Async.fetchAll('SELECT * FROM owned_vehicles WHERE vehicle LIKE \'%"plate":"' .. plate .. '"%\' LIMIT 1', {}, function(vehicles)
 		for index, vehicle in pairs(vehicles) do
 			-- Insert vehicle into impound table
-	    MySQL.Async.execute("INSERT INTO `impounded_vehicles` (`vehicle`, `owner`) VALUES(@vehicle, @owner)", {['@vehicle'] = vehicle.vehicle, ['@owner'] = vehicle.owner})
+	    MySQL.Async.execute("INSERT INTO `impounded_vehicles` (`vehicle`, `owner`, `impounded_at`) VALUES(@vehicle, @owner, @timestamp)", {['@vehicle'] = vehicle.vehicle, ['@owner'] = vehicle.owner, ['@timestamp'] = current_time})
 
 			-- Delete vehicle from garage
 	    MySQL.Async.execute("DELETE FROM owned_vehicles WHERE id=@id LIMIT 1", {['@id'] = vehicle.id})
@@ -60,6 +62,7 @@ end
 	 void
 ]]
 function RetrieveVehicle(plate)
+
 	-- Retrieve vehicle data from impound lot
 	MySQL.Async.fetchAll('SELECT * FROM impounded_vehicles WHERE vehicle LIKE \'%"plate":"' .. plate .. '"%\' LIMIT 1', {}, function(vehicles)
 		for index, vehicle in pairs(vehicles) do
@@ -70,4 +73,23 @@ function RetrieveVehicle(plate)
 	    MySQL.Async.execute("DELETE FROM impounded_vehicles WHERE id=@id LIMIT 1", {['@id'] = vehicle.id})
 		end
   end)
+end
+
+--[[
+  Determines if a vehicle is eligable for release
+
+	Params
+	  vehicle - table
+
+	Returns
+	  boolean
+]]
+function VehicleEligableForRelease(vehicle)
+  local current_time = os.time(os.date("!*t"))
+
+	if (vehicle.impounded_at + (Config.ElapsedTimeBeforeRelease * 60)) <= current_time then
+		return true
+	else
+		return false
+	end
 end

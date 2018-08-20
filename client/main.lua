@@ -251,7 +251,7 @@ function ListVehiclesMenu()
   		local vehClassFilter = {}
 			local allowedVehicles = {}
   		if currentImpoundLot.AllowedVehicles ~= nil then
-  			allowedVehicles = this_Garage.AllowedVehicles
+  			allowedVehicles = currentImpoundLot.AllowedVehicles
   		end
 
   		if currentImpoundLot.Type == nil or currentImpoundLot.Type == "impound_lot" then
@@ -289,8 +289,15 @@ function ListVehiclesMenu()
   		if has_value(vehClassFilter,GetVehicleClassFromName(vehicleName)) then
   			if has_value(allowedVehicles,vehicleName:lower()) or tablelength(allowedVehicles) == 0 then
   				local labelvehicle
-    			labelvehicle = vehicleName .. " - " .. vehiclePlate
-  				table.insert(elements, {label = labelvehicle, value = v})
+
+					if v.can_release then
+    			  labelvehicle = vehicleName .. " - " .. vehiclePlate
+						release_value = v
+					else
+    			  labelvehicle = vehicleName .. " - " .. vehiclePlate .. " - NOT ELIGABLE FOR RELEASE"
+						release_value = 'ne'
+					end
+  				table.insert(elements, {label = labelvehicle, value = release_value})
   			end
 
   			if tablelength(elements) >= 10 then
@@ -333,9 +340,12 @@ function loadListVehiclePage(elementPages, page)
 			elseif data.current.value == "pp" then
 				page = page - 1
 				loadListVehiclePage(elementPages,page)
+			elseif data.current.value == "ne" then
+				menu.close()
+				ESX.ShowNotification('This vehicle is not eligable for release')
 			else
 				menu.close()
-				SpawnVehicle(data.current.value.vehicle)
+			  SpawnVehicle(data.current.value.vehicle)
 			end
 		end,
 		function(data, menu)
@@ -344,6 +354,15 @@ function loadListVehiclePage(elementPages, page)
 	end
 end
 
+--[[
+  Menu Callback for spawning a vehicle
+
+	Params
+	  vehicle - table
+
+  Returns
+	  void
+]]
 function SpawnVehicle(vehicle)
 	local heading = 120.0
 	local plate = vehicle.plate
@@ -353,7 +372,7 @@ function SpawnVehicle(vehicle)
 	end
 
 	ESX.TriggerServerCallback('esx_impound:retrieve_vehicle', function()
-	  ESX.ShowNotification('Vehicle has been returned!')
+	  ESX.ShowNotification('Vehicle has been released!')
 		CreateClientSideVehicle(vehicle)
 	end, plate)
 

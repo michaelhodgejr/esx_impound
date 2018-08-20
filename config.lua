@@ -2,14 +2,19 @@ Config = {}
 
 Config = {
 	DrawDistance = 100,
-	Price = 5000,
 	BlipInfos = {
 		Sprite = 477,
 		Color = 54
 	}
 }
 
+-- The jobs that are able to impound vehicles
 Config.JobsThatCanImpound = {'police', 'tow'}
+
+-- The time in minutes before a user is able to retrieve a vehicle from the
+-- impound lot.
+Config.ElapsedTimeBeforeRelease = 1
+
 
 Config.ImpoundLots = {
 	Sandy = {
