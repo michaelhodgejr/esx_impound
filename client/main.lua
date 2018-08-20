@@ -15,8 +15,10 @@ ESX = nil
 local HasAlreadyEnteredMarker   = false
 local LastZone                  = nil
 local PlayerData = nil
-local drawnImpoundBlips = {}
-local drawImpoundBlips = true
+local CurrentActionMsg          = ''
+local CurrentActionData         = {}
+local GUI                       = {}
+GUI.Time                        = 0
 
 --[[
   Setup of ESX
@@ -30,6 +32,7 @@ end)
 
 RegisterNetEvent('esx:playerLoaded')
 AddEventHandler('esx:playerLoaded', function(xPlayer)
+	  drawImpoundLotMapBlips()
 end)
 
 
@@ -40,22 +43,16 @@ function drawImpoundLotMapBlips()
 	local zones = {}
 	local blipInfo = {}
 
-	if drawImpoundBlips then
-
-		for zoneKey,zoneValues in pairs(Config.ImpoundLots)do
-			local blip = AddBlipForCoord(zoneValues.Pos.x, zoneValues.Pos.y, zoneValues.Pos.z)
-			SetBlipSprite (blip, Config.BlipInfos.Sprite)
-			SetBlipDisplay(blip, 4)
-			SetBlipScale  (blip, 0.8)
-			SetBlipColour (blip, Config.BlipInfos.Color)
-			SetBlipAsShortRange(blip, true)
-			BeginTextCommandSetBlipName("STRING")
-			AddTextComponentString("Impound Lot")
-			EndTextCommandSetBlipName(blip)
-			table.insert(drawnImpoundBlips, blip)
-		end
-
-		drawImpoundBlips = false
+	for zoneKey,zoneValues in pairs(Config.ImpoundLots)do
+		local blip = AddBlipForCoord(zoneValues.Pos.x, zoneValues.Pos.y, zoneValues.Pos.z)
+		SetBlipSprite (blip, Config.BlipInfos.Sprite)
+		SetBlipDisplay(blip, 4)
+		SetBlipScale  (blip, 0.8)
+		SetBlipColour (blip, Config.BlipInfos.Color)
+		SetBlipAsShortRange(blip, true)
+		BeginTextCommandSetBlipName("STRING")
+		AddTextComponentString("Impound Lot")
+		EndTextCommandSetBlipName(blip)
 	end
 end
 
@@ -75,15 +72,8 @@ end
 Citizen.CreateThread(function()
 	while true do
 		Wait(0)
-
-		if hasImpoundAppropriateJob() then
-      drawImpoundLotMapBlips()
-			drawImpoundLotMarkers()
-		else
-			removeImpoundLotMapBlips()
-			drawBlipsIfAble = true
-		end
-
+    drawImpoundLotMapBlips()
+		drawImpoundLotMarkers()
 	end
 end)
 
@@ -91,7 +81,7 @@ end)
   Thread for determining if the player has entered a impound lot marker or not
 ]]
 Citizen.CreateThread(function()
-	local currentZone = 'impound_lots'
+	local currentZone = 'impound_lot'
 	while true do
 		Wait(0)
 
@@ -118,6 +108,48 @@ Citizen.CreateThread(function()
 	end
 end)
 
+
+Citizen.CreateThread(function()
+	while true do
+		Citizen.Wait(0)
+
+		if CurrentAction ~= nil then
+
+			SetTextComponentFormat('STRING')
+			AddTextComponentString(CurrentActionMsg)
+			DisplayHelpTextFromStringLabel(0, 0, 1, -1)
+
+			if IsControlPressed(0,  Keys['E']) and (GetGameTimer() - GUI.Time) > 150 then
+				if CurrentAction == 'impound_lot_menu' then
+					OpenImpoundMenu()
+				end
+
+				CurrentAction = nil
+				GUI.Time      = GetGameTimer()
+			end
+		end
+	end
+end)
+
+AddEventHandler('esx_impound:hasEnteredMarker', function(zone)
+	if zone == 'impound_lot' then
+		CurrentAction     = 'impound_lot_menu'
+		CurrentActionMsg  = "Press ~INPUT_PICKUP~ to access the impound lot"
+		CurrentActionData = {}
+	end
+end)
+
+AddEventHandler('esx_impound:hasExitedMarker', function(zone)
+	ESX.UI.Menu.CloseAll()
+	CurrentAction = nil
+end)
+
+--[[
+  Determines if the player has a job that allows access to the impound lot
+
+	Returns
+	  boolean
+]]
 function hasImpoundAppropriateJob()
 	if has_value(Config.JobsThatCanImpound, ESX.GetPlayerData().job.name) then
 		return true
@@ -136,6 +168,62 @@ function drawImpoundLotMarkers()
 			DrawMarker(v.DropoffPoint.Marker, v.DropoffPoint.Pos.x, v.DropoffPoint.Pos.y, v.DropoffPoint.Pos.z, 0.0, 0.0, 0.0, 0, 0.0, 0.0, v.DropoffPoint.Size.x, v.DropoffPoint.Size.y, v.DropoffPoint.Size.z, v.DropoffPoint.Color.r, v.DropoffPoint.Color.g, v.DropoffPoint.Color.b, 100, false, true, 2, false, false, false, false)
 		end
 	end
+end
+
+function OpenImpoundMenu()
+	local ply = GetPlayerPed(-1)
+
+	ESX.UI.Menu.CloseAll()
+
+	local elements = {
+		{label = "Retrieve Vehicle", value = "retrieve_vehicle"}
+	}
+
+
+	if hasImpoundAppropriateJob() and IsPedInAnyVehicle(ply, true) then
+		table.insert(elements, {label = "Impound Vehicle", value="impound_vehicle"})
+	end
+
+
+	ESX.UI.Menu.Open(
+		'default', GetCurrentResourceName(), 'impound_menu',
+		{
+			title    = 'Impound Lot',
+			align    = 'top-left',
+			elements = elements,
+		},
+		function(data, menu)
+
+			menu.close()
+			if(data.current.value == 'retrieve_vehicle') then
+				ListVehiclesMenu()
+			end
+
+			if(data.current.value == 'impound_vehicle') then
+				ImpoundCurrentVehicle()
+			end
+		end,
+		function(data, menu)
+			menu.close()
+		end
+	)
+end
+
+--[[
+  Impounds the vehicle the driver
+
+	Returns
+	  void
+]]
+function ImpoundCurrentVehicle()
+	local vehicle = GetVehiclePedIsIn(GetPlayerPed(-1), true)
+	local vprops = ESX.Game.GetVehicleProperties(vehicle)
+	local plate = vprops.plate
+
+	ESX.TriggerServerCallback('esx_impound:impound_vehicle', function()
+	  ESX.ShowNotification('Vehicle has been impounded!')
+	  DeleteVehicle(vehicle)
+	end, plate)
 end
 
 --[[

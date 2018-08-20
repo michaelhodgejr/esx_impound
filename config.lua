@@ -12,8 +12,8 @@ Config = {
 Config.JobsThatCanImpound = {'police', 'tow'}
 
 Config.ImpoundLots = {
-	Downtown = {
-		Pos = {x=1047.03, y=3605.45, z=33.13},
+	Sandy = {
+		Pos = {x=1048.13, y= 3618.42, z= 32.2},
 		Size  = {x = 3.0, y = 3.0, z = 1.0},
 		Color = {r = 204, g = 204, b = 0},
 		Marker = -1,
