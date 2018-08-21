@@ -14,9 +14,16 @@ Config.JobsThatCanImpound = {'police', 'tow'}
 -- Is the user required to wait a period of time before they can get their vehicle back
 Config.UserMustWaitElapsedTime = true
 
+-- Is the user required to pay a fine before they get their vehicle back
+Config.UserMustPayFine = true
+
+-- The amount of the fine the user must pay
+Config.ImpoundFineAmount = 10
+
+
 -- The time in minutes before a user is able to retrieve a vehicle from the
 -- impound lot.
-Config.ElapsedTimeBeforeRelease = 1
+Config.ElapsedTimeBeforeRelease = 0
 
 
 Config.ImpoundLots = {

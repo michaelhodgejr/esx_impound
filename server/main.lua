@@ -11,8 +11,6 @@ ESX.RegisterServerCallback('esx_impound:retrieve_vehicle', function(source, cb, 
 	cb()
 end)
 
-
-
 ESX.RegisterServerCallback('esx_impound:get_vehicle_list', function(source, cb)
 	local _source = source
 	local xPlayer = ESX.GetPlayerFromId(_source)
@@ -27,6 +25,16 @@ ESX.RegisterServerCallback('esx_impound:get_vehicle_list', function(source, cb)
 	end)
 end)
 
+ESX.RegisterServerCallback('esx_impound:check_money', function(source, cb)
+	local xPlayer = ESX.GetPlayerFromId(source)
+
+	if xPlayer.get('money') >= Config.ImpoundFineAmount then
+		xPlayer.removeAccountMoney('bank', Config.ImpoundFineAmount)
+		cb(true)
+	else
+		cb(false)
+	end
+end)
 
 --[[
   Impounds a vehicle

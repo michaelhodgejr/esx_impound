@@ -291,7 +291,11 @@ function ListVehiclesMenu()
   				local labelvehicle
 
 					if v.can_release then
-    			  labelvehicle = vehicleName .. " - " .. vehiclePlate
+						if Config.UserMustPayFine then
+    			    labelvehicle = vehicleName .. " - " .. vehiclePlate .. " $(".. Config.ImpoundFineAmount ..")"
+						else
+    			    labelvehicle = vehicleName .. " - " .. vehiclePlate
+						end
 						release_value = v
 					else
     			  labelvehicle = vehicleName .. " - " .. vehiclePlate .. " - NOT ELIGABLE FOR RELEASE"
@@ -345,7 +349,18 @@ function loadListVehiclePage(elementPages, page)
 				ESX.ShowNotification('This vehicle is not eligable for release')
 			else
 				menu.close()
-			  SpawnVehicle(data.current.value.vehicle)
+
+				if Config.UserMustPayFine then
+					ESX.TriggerServerCallback('esx_impound:check_money', function(paidFine)
+						if paidFine then
+			        SpawnVehicle(data.current.value.vehicle)
+						else
+							ESX.ShowNotification('You do not have enough money to retrieve your vehicle.')
+						end
+					end)
+				else
+			    SpawnVehicle(data.current.value.vehicle)
+				end
 			end
 		end,
 		function(data, menu)
