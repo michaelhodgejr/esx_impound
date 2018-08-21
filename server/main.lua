@@ -87,9 +87,15 @@ end
 function VehicleEligableForRelease(vehicle)
   local current_time = os.time(os.date("!*t"))
 
-	if (vehicle.impounded_at + (Config.ElapsedTimeBeforeRelease * 60)) <= current_time then
+	if Config.UserMustWaitElapsedTime then
+		-- Determine the time the user could get their vehicle back and check if that time
+		-- has expired
+		if (vehicle.impounded_at + (Config.ElapsedTimeBeforeRelease * 60)) <= current_time then
+			return true
+		else
+			return false
+		end
+  else
 		return true
-	else
-		return false
 	end
 end

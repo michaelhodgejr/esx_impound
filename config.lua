@@ -11,6 +11,9 @@ Config = {
 -- The jobs that are able to impound vehicles
 Config.JobsThatCanImpound = {'police', 'tow'}
 
+-- Is the user required to wait a period of time before they can get their vehicle back
+Config.UserMustWaitElapsedTime = true
+
 -- The time in minutes before a user is able to retrieve a vehicle from the
 -- impound lot.
 Config.ElapsedTimeBeforeRelease = 1
