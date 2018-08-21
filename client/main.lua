@@ -58,22 +58,12 @@ function drawImpoundLotMapBlips()
 end
 
 --[[
-  Function for drawing the impound lot blips on the map
-]]
-function removeImpoundLotMapBlips()
-	for index, blip in pairs(drawnImpoundBlips)do
-		RemoveBlip(blip)
-	end
-end
-
---[[
-  Thread for drawing the blips, markers, dropoff and retrieval markers for
+  Thread for drawing the dropoff and retrieval markers for
   the impound lots
 ]]
 Citizen.CreateThread(function()
 	while true do
 		Wait(0)
-    drawImpoundLotMapBlips()
 		drawImpoundLotMarkers()
 	end
 end)
@@ -227,7 +217,7 @@ function ImpoundCurrentVehicle()
 
 	ESX.TriggerServerCallback('esx_impound:impound_vehicle', function()
 	  ESX.ShowNotification('Vehicle has been impounded!')
-	  DeleteVehicle(vehicle)
+	  ESX.Game.DeleteVehicle(vehicle)
 	end, plate)
 end
 
