@@ -135,6 +135,32 @@ AddEventHandler('esx_impound:hasExitedMarker', function(zone)
 	CurrentAction = nil
 end)
 
+RegisterNetEvent("esx_impound:impound_nearest_vehicle")
+AddEventHandler("esx_impound:impound_nearest_vehicle", function(args)
+	local coords = GetEntityCoords(GetPlayerPed(-1))
+	local vehicle = GetClosestVehicle(coords['x'],  coords['y'],  coords['z'],  2.0,  0,  71)
+
+	if DoesEntityExist(vehicle) then
+		if hasImpoundAppropriateJob() then
+			if IsPedInAnyVehicle(GetPlayerPed(-1), false) then
+				ESX.ShowNotification('You can not use /impound when in a vehicle.')
+			else
+				local vprops = ESX.Game.GetVehicleProperties(vehicle)
+				local plate = vprops.plate
+
+				ESX.TriggerServerCallback('esx_impound:impound_vehicle', function()
+				  ESX.ShowNotification('Vehicle has been impounded!')
+				  ESX.Game.DeleteVehicle(vehicle)
+				end, plate)
+			end
+		else
+			ESX.ShowNotification('You do not have permission to use this command.')
+		end
+	end
+
+end)
+
+
 --[[
   Determines if the player has a job that allows access to the impound lot
 

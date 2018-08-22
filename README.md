@@ -33,3 +33,5 @@ by adding appropriate entries to the config file.
 # Additional Notes
 
 There are some configuration options in the config file that you can adjust to your liking.
+
+The /impound can be used by those jobs listed in the config file to impound a vehicle remotely.

@@ -1,6 +1,10 @@
 ESX = nil
 TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
 
+RegisterCommand('impound', function(source, args)
+  TriggerClientEvent('esx_impound:impound_nearest_vehicle', source)
+end)
+
 ESX.RegisterServerCallback('esx_impound:impound_vehicle', function(source, cb, plate)
 	ImpoundVehicle(plate)
 	cb()
