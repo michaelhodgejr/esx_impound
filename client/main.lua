@@ -18,6 +18,7 @@ local PlayerData                = nil
 local CurrentActionMsg          = ''
 local CurrentActionData         = {}
 local GUI                       = {}
+local DrawnMapBlips             = {}
 GUI.Time                        = 0
 local currentImpoundLot					= nil
 
@@ -33,7 +34,9 @@ end)
 
 RegisterNetEvent('esx:playerLoaded')
 AddEventHandler('esx:playerLoaded', function(xPlayer)
-  drawImpoundLotMapBlips()
+  if (hasImpoundAppropriateJob() or hasRetrievalAppropriateJob()) then
+    drawImpoundLotMapBlips()
+  end
 end)
 
 
@@ -54,6 +57,16 @@ function drawImpoundLotMapBlips()
     BeginTextCommandSetBlipName("STRING")
     AddTextComponentString("Impound Lot")
     EndTextCommandSetBlipName(blip)
+    table.insert(DrawnMapBlips, blip)
+  end
+end
+
+--[[
+  Deletes drawn map blips
+]]
+function deleteImpoundLotMapBlips()
+  for index, blip in pairs(DrawnMapBlips) do
+    RemoveBlip(blip)
   end
 end
 
@@ -64,7 +77,9 @@ the impound lots
 Citizen.CreateThread(function()
   while true do
     Wait(0)
-    drawImpoundLotMarkers()
+    if (hasImpoundAppropriateJob() or hasRetrievalAppropriateJob()) then
+      drawImpoundLotMarkers()
+    end
   end
 end)
 
@@ -129,6 +144,15 @@ AddEventHandler('esx_impound:hasEnteredMarker', function(zone)
   end
 end)
 
+RegisterNetEvent('esx:setJob')
+AddEventHandler('esx:setJob', function(job)
+  if (hasImpoundAppropriateJob() or hasRetrievalAppropriateJob()) then
+    drawImpoundLotMapBlips()
+  else
+    deleteImpoundLotMapBlips()
+  end
+end)
+
 AddEventHandler('esx_impound:hasExitedMarker', function(zone)
   ESX.UI.Menu.CloseAll()
   CurrentAction = nil
@@ -167,12 +191,36 @@ AddEventHandler("esx_impound:impound_nearest_vehicle", function(args)
   boolean
   ]]
   function hasImpoundAppropriateJob()
+    if not Config.RestrictImpoundToJobs then
+      return true
+    end
+
     if has_value(Config.JobsThatCanImpound, ESX.GetPlayerData().job.name) then
       return true
     else
       return false
     end
   end
+
+
+  --[[
+  Determines if the player is able to retrieve a vehicle
+
+  Returns
+  boolean
+  ]]
+  function hasRetrievalAppropriateJob()
+    if not Config.RestrictRetrievalToJobs then
+      return true
+    end
+
+    if has_value(Config.JobsThatCanRetrieve, ESX.GetPlayerData().job.name) then
+      return true
+    else
+      return false
+    end
+  end
+
 
   function drawImpoundLotMarkers()
     local coords = GetEntityCoords(GetPlayerPed(-1))

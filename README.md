@@ -67,3 +67,21 @@ SandyAirField = {
 
 Review and execute the esx_impound.sql file. If you wish to add additional impound locations you can do that
 by adding appropriate entries to the config file.
+
+# Upgrading
+
+__1.1.0 -> 1.2.0__
+
+Add the new configuration options to your config file
+
+```
+-- Determines if the ability to impound vehicles is based upon esx jobs
+Config.RestrictImpoundToJobs = true
+
+-- Determines if the ability to retrieve vehicles is based upon esx jobs
+Config.RestrictRetrievalToJobs = false
+
+-- The jobs that are able to retrieve vehicles
+Config.RetrievalJobs = {'unemployed'}
+
+```

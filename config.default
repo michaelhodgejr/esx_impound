@@ -8,8 +8,17 @@ Config = {
 	}
 }
 
+-- Determines if the ability to impound vehicles is based upon esx jobs
+Config.RestrictImpoundToJobs = true
+
 -- The jobs that are able to impound vehicles
 Config.JobsThatCanImpound = {'police', 'tow'}
+
+-- Determines if the ability to retrieve vehicles is based upon esx jobs
+Config.RestrictRetrievalToJobs = false
+
+-- The jobs that are able to retrieve vehicles
+Config.RetrievalJobs = {'unemployed'}
 
 -- Is the user required to wait a period of time before they can get their vehicle back
 Config.UserMustWaitElapsedTime = true
