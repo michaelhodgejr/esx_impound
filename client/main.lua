@@ -21,6 +21,7 @@ local GUI                       = {}
 local DrawnMapBlips             = {}
 GUI.Time                        = 0
 local currentImpoundLot					= nil
+local playerIsLoaded            = false
 
 --[[
 Setup of ESX
@@ -34,6 +35,8 @@ end)
 
 RegisterNetEvent('esx:playerLoaded')
 AddEventHandler('esx:playerLoaded', function(xPlayer)
+  playerIsLoaded = true
+
   if (hasImpoundAppropriateJob() or hasRetrievalAppropriateJob()) then
     drawImpoundLotMapBlips()
   end
@@ -76,10 +79,13 @@ the impound lots
 ]]
 Citizen.CreateThread(function()
   while true do
-    Wait(0)
-    if (hasImpoundAppropriateJob() or hasRetrievalAppropriateJob()) then
-      drawImpoundLotMarkers()
+    if playerIsLoaded then
+      if (hasImpoundAppropriateJob() or hasRetrievalAppropriateJob()) then
+        drawImpoundLotMarkers()
+      end
     end
+
+    Citizen.Wait(0)
   end
 end)
 
