@@ -21,7 +21,8 @@ local GUI                       = {}
 local DrawnMapBlips             = {}
 GUI.Time                        = 0
 local currentImpoundLot					= nil
-local playerIsLoaded            = false
+local playerIsLoaded            = true
+local currentJob                = 'unemployed'
 
 --[[
 Setup of ESX
@@ -36,12 +37,17 @@ end)
 RegisterNetEvent('esx:playerLoaded')
 AddEventHandler('esx:playerLoaded', function(xPlayer)
   playerIsLoaded = true
+  currentJob = ESX.GetPlayerData().job.name
 
   if (hasImpoundAppropriateJob() or hasRetrievalAppropriateJob()) then
     drawImpoundLotMapBlips()
   end
 end)
 
+RegisterNetEvent('esx:setJob')
+AddEventHandler('esx:setJob', function(xPlayer)
+  currentJob = ESX.GetPlayerData().job.name
+end)
 
 --[[
 Function for drawing the impound lot blips on the map
@@ -79,13 +85,12 @@ the impound lots
 ]]
 Citizen.CreateThread(function()
   while true do
+    Wait(0)
     if playerIsLoaded then
       if (hasImpoundAppropriateJob() or hasRetrievalAppropriateJob()) then
         drawImpoundLotMarkers()
       end
     end
-
-    Citizen.Wait(0)
   end
 end)
 
@@ -201,7 +206,7 @@ AddEventHandler("esx_impound:impound_nearest_vehicle", function(args)
       return true
     end
 
-    if has_value(Config.JobsThatCanImpound, ESX.GetPlayerData().job.name) then
+    if has_value(Config.JobsThatCanImpound, currentJob) then
       return true
     else
       return false
@@ -220,7 +225,7 @@ AddEventHandler("esx_impound:impound_nearest_vehicle", function(args)
       return true
     end
 
-    if has_value(Config.JobsThatCanRetrieve, ESX.GetPlayerData().job.name) then
+    if has_value(Config.JobsThatCanRetrieve, currentJob) then
       return true
     else
       return false
