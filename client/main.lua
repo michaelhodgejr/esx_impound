@@ -21,7 +21,7 @@ local GUI                       = {}
 local DrawnMapBlips             = {}
 GUI.Time                        = 0
 local currentImpoundLot					= nil
-local playerIsLoaded            = true
+local playerIsLoaded            = false 
 local currentJob                = 'unemployed'
 
 --[[
