@@ -53,15 +53,42 @@ function ImpoundVehicle(plate)
   local current_time = os.time(os.date("!*t"))
 
   -- Retrieve vehicle data from garage
-  MySQL.Async.fetchAll('SELECT * FROM owned_vehicles WHERE vehicle LIKE \'%"plate":"' .. plate .. '"%\' LIMIT 1', {}, function(vehicles)
-    for index, vehicle in pairs(vehicles) do
-      -- Insert vehicle into impound table
-      MySQL.Async.execute("INSERT INTO `impounded_vehicles` (`vehicle`, `owner`, `impounded_at`) VALUES(@vehicle, @owner, @timestamp)", {['@vehicle'] = vehicle.vehicle, ['@owner'] = vehicle.owner, ['@timestamp'] = current_time})
+  if Config.OwnedVehiclesHasPlateColumn then
+    MySQL.Async.fetchAll('SELECT * FROM owned_vehicles WHERE plate = @plate LIMIT 1', {
+      ['@plate'] = plate
+    }, function(vehicles)
+      ProcessImpoundment(plate, current_time, vehicles)
+    end)
+  else
+    MySQL.Async.fetchAll('SELECT * FROM owned_vehicles WHERE vehicle LIKE \'%"plate":"' .. plate .. '"%\' LIMIT 1', {}, function(vehicles)
+      ProcessImpoundment(plate, current_time, vehicles)
+    end)
+  end
 
-      -- Delete vehicle from garage
-      MySQL.Async.execute("DELETE FROM owned_vehicles WHERE id=@id LIMIT 1", {['@id'] = vehicle.id})
-    end
-  end)
+end
+
+--[[
+  Processes the impound of a vehicle
+
+  Params
+    vehicles - table of vehicles
+
+  Returns
+    void
+]]
+function ProcessImpoundment(plate, current_time, vehicles)
+  for index, vehicle in pairs(vehicles) do
+    -- Insert vehicle into impound table
+    MySQL.Async.execute("INSERT INTO `impounded_vehicles` (`plate`, `vehicle`, `owner`, `impounded_at`) VALUES(@plate, @vehicle, @owner, @timestamp)", {
+      ['@plate'] = plate,
+      ['@vehicle'] = vehicle.vehicle,
+      ['@owner'] = vehicle.owner,
+      ['@timestamp'] = current_time
+    })
+
+    -- Delete vehicle from garage
+    MySQL.Async.execute("DELETE FROM owned_vehicles WHERE id=@id LIMIT 1", {['@id'] = vehicle.id})
+  end
 end
 
 --[[
@@ -76,11 +103,27 @@ void
 function RetrieveVehicle(plate)
 
   -- Retrieve vehicle data from impound lot
-  MySQL.Async.fetchAll('SELECT * FROM impounded_vehicles WHERE vehicle LIKE \'%"plate":"' .. plate .. '"%\' LIMIT 1', {}, function(vehicles)
+  MySQL.Async.fetchAll('SELECT * FROM impounded_vehicles WHERE plate = @plate LIMIT 1', {
+    ['@plate'] = plate
+  }, function(vehicles)
     for index, vehicle in pairs(vehicles) do
       -- Insert vehicle into owned_vehicles table
-      MySQL.Async.execute("INSERT INTO `owned_vehicles` (`vehicle`, `owner`, `state`) VALUES(@vehicle, @owner, '0')", {['@vehicle'] = vehicle.vehicle, ['@owner'] = vehicle.owner})
-
+      if Config.OwnedVehiclesHasPlateColumn then
+        MySQL.Async.execute("INSERT INTO `owned_vehicles` (`plate`, `vehicle`, `owner`, `state`) VALUES(@plate, @vehicle, @owner, '0')",
+          {
+            ['@plate'] = plate,
+            ['@vehicle'] = vehicle.vehicle,
+            ['@owner'] = vehicle.owner
+          }
+        )
+      else
+        MySQL.Async.execute("INSERT INTO `owned_vehicles` (`vehicle`, `owner`, `state`) VALUES(@vehicle, @owner, '0')",
+          {
+            ['@vehicle'] = vehicle.vehicle,
+            ['@owner'] = vehicle.owner
+          }
+        )
+      end
       -- Delete vehicle from Impound Lot
       MySQL.Async.execute("DELETE FROM impounded_vehicles WHERE id=@id LIMIT 1", {['@id'] = vehicle.id})
     end

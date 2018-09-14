@@ -69,6 +69,22 @@ Review and execute the esx_impound.sql file. If you wish to add additional impou
 by adding appropriate entries to the config file.
 
 # Upgrading
+__1.2.1 -> 1.3.0__
+
+Add the new configuration options to your config file
+
+```
+-- Set to true if you are using a "plate" column on your owned_vehicles table (such as when using esx_migrate)
+Config.OwnedVehiclesHasPlateColumn = false
+```
+
+Execute the following SQL statements
+
+```
+ALTER TABLE `impounded_vehicles` ADD COLUMN `plate` VARCHAR(12) NULL DEFAULT NULL AFTER `id`;
+ALTER TABLE `impounded_vehicles` ADD INDEX `plate` (`plate`);
+```
+
 
 __1.1.0 -> 1.2.0__
 

@@ -8,6 +8,9 @@ Config = {
 	}
 }
 
+-- Set to true if you are using a "plate" column on your owned_vehicles table (such as when using esx_migrate)
+Config.OwnedVehiclesHasPlateColumn = false
+
 -- Determines if the ability to impound vehicles is based upon esx jobs
 Config.RestrictImpoundToJobs = true
 
